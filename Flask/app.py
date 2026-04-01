@@ -1,4 +1,3 @@
-
 import os
 import time
 
@@ -21,9 +20,17 @@ app.register_blueprint(userBp, url_prefix='/user')
 # 注册电影相关的方法
 app.register_blueprint(movieBp, url_prefix='/movie')
 
-# 数据库配置信息
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3307/flask_douban_comment'
+# ================= 统一数据库配置区 (演示时改这里即可) =================
+DB_HOST = '127.0.0.1'
+DB_PORT = '3306'  # 统一改为标准 3306 端口
+DB_USER = 'root'
+DB_PASS = '123456'
+DB_NAME = 'flask_douban_comment'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# ======================================================================
+
 # 数据库连接池配置
 app.config['SQLALCHEMY_POOL_SIZE'] = 10
 app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
@@ -39,33 +46,20 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 basedir = os.path.abspath(os.path.dirname(__file__))
 ALLOWED_EXTENSIONS = set(['txt', 'png', 'jpg', 'xls', 'JPG', 'PNG', 'gif', 'GIF'])
 
-# 日志系统配置
-# handler = logging.FileHandler('./error.log', encoding='UTF-8')
-# logging_format = logging.Formatter(
-#             '%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)s - %(message)s')
-# handler.setFormatter(logging_format)
-# app.logger.addHandler(handler)
-
 # 返回json格式转换 使用这个的话就不需要每次都写json返回了，简化代码
 app.json_encoder = JSONEncoder
 
-# SQLAlchemy 为ORM框架，即用来简化操作数据库的包，具体内容需要学习ORM相关知识
+# SQLAlchemy 为ORM框架
 db = SQLAlchemy(app)
-# Marshmallow 是用来封装返回SQLAlchemy 的返回结果的，通过这个包可以直接把数据转成JSON，从而返回给前端使用
 ma = Marshmallow(app)
 
-
-# 用来捕捉服务器运行过程中的500-内部错误，并给前端返回信息
 @app.errorhandler(500)
 def special_exception_handler(error):
     app.logger.error(error)
     return '请联系管理员', 500
 
-
-# 判断文件后缀
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
-
 
 @app.route('/file/upload', methods=['POST'], strict_slashes=False)
 def api_upload():
@@ -76,7 +70,6 @@ def api_upload():
     f = request.files['myfile']
     if f and allowed_file(f.filename):
         fname = f.filename
-        # fname = secure_filename(f.filename)
         print(fname)
         ext = fname.rsplit('.', 1)[1]
         unix_time = int(time.time())
@@ -85,16 +78,9 @@ def api_upload():
     res.update(data=new_filename, code=0)
     return res.data
 
-
-
 @app.route('/file/download/<filename>/')
 def api_download(filename):
-    # print('下载..' + filename)
     return send_from_directory('upload', filename, as_attachment=False)
-
-
-
-
 
 # 深度学习情感分析接口
 @app.route('/deeplearning/senti_single', methods=['POST'])
@@ -106,7 +92,6 @@ def senti_single():
     result = sentimentalAnalysis_single(datas)
     res.update(msg="成功", code=0, data=result)
     return res.data
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
